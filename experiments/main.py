@@ -8,14 +8,13 @@ import random
 from preprocessing import DataHandler
 import os
 import wandb
-import panphon
 
 
+# works for both strings and list of strings
 def get_edit_distance(s1, s2):
-    # TODO: remove the BOS/EOS from consideration - affects normalized edit distance
-
     if len(s1) > len(s2):
         s1, s2 = s2, s1
+
     # len(s1) <= len(s2)
     # TODO: understand
     distances = range(len(s1) + 1)
@@ -76,13 +75,12 @@ def train(epochs, model, optimizer, loss_fn, train_data, dev_data):
         t = time.time()
 
         train_loss, train_accuracy = train_once(model, optimizer, loss_fn, train_data)
-        dev_loss, edit_distance, feat_ed, dev_accuracy, _ = evaluate(model, loss_fn, dev_data, DEVICE, MAX_LENGTH, vocab)
+        dev_loss, edit_distance, dev_accuracy, _ = evaluate(model, loss_fn, dev_data, DEVICE, MAX_LENGTH, vocab)
         wandb.log(
             {
                 "train_loss": train_loss,
                 "dev_loss": dev_loss,
                 "dev_edit_distance": edit_distance,
-                "dev_feat_edit_dist": feat_ed,
                 "accuracy": dev_accuracy,
             }
         )
@@ -154,12 +152,10 @@ def record(best_loss_epoch, best_loss, best_ed_epoch, edit_distance):
 
 def evaluate(model, loss_fn, dataset, device, max_length, vocab):
     model.eval()
-    dist = panphon.distance.Distance()
 
     with torch.no_grad():
         total_loss = 0
         edit_distance = 0
-        feature_edit_distance = 0
         n_correct = 0
         predictions = []
         for _, (source_tokens, source_langs, target_tokens, target_langs) in dataset.items():
@@ -176,18 +172,17 @@ def evaluate(model, loss_fn, dataset, device, max_length, vocab):
             # TODO: get the batching correct
             predict_str, protoform_str = \
                 vocab.to_string(prediction), vocab.to_string(target_tokens)
+            # character edit distance
             edit_distance += get_edit_distance(predict_str, protoform_str)
             if predict_str == protoform_str:
                 n_correct += 1
             predictions.append((predict_str, protoform_str))
-            feature_edit_distance += dist.feature_edit_distance(predict_str, protoform_str)
 
     accuracy = n_correct / len(dataset)
     mean_loss = total_loss / len(dataset)
     mean_edit_distance = edit_distance / len(dataset)
-    mean_feature_edit_distance = feature_edit_distance / len(dataset)
 
-    return mean_loss, mean_edit_distance, mean_feature_edit_distance, accuracy, predictions
+    return mean_loss, mean_edit_distance, accuracy, predictions
 
 
 def save_model(model, optimizer, args, epoch, filepath):
@@ -267,7 +262,7 @@ if __name__ == '__main__':
 
     train_dataset, phoneme_vocab, langs = DataHandler.load_dataset(f'./data/{DATASET}/train.pickle')
     dev_dataset, _, _ = DataHandler.load_dataset(f'./data/{DATASET}/dev.pickle')
-    test_dataset, _, langs = DataHandler.load_dataset(f'./data/{DATASET}/test.pickle')
+    test_dataset, _, _ = DataHandler.load_dataset(f'./data/{DATASET}/test.pickle')
     # special tokens in the separator embedding's vocabulary
     langs = langs + ['sep']
     # TODO: create a special vocab just for the separator embeddings
@@ -311,9 +306,9 @@ if __name__ == '__main__':
     dev_tensors = DataHandler.get_cognateset_batch(dev_dataset, langs, vocab, L2I, DEVICE)
     test_tensors = DataHandler.get_cognateset_batch(test_dataset, langs, vocab, L2I, DEVICE)
     train(NUM_EPOCHS, model, optimizer, loss_fn, train_tensors, dev_tensors)
-    test_loss, test_ed, test_feat_ed, test_acc, test_preds = evaluate(model, loss_fn, test_tensors, DEVICE, MAX_LENGTH, vocab)
-
+    test_loss, test_ed, test_acc, test_preds = evaluate(model, loss_fn, test_tensors, DEVICE, MAX_LENGTH, vocab)
 
     # TODO: call the evaluate file. then report all of its summary metrics
         # report the best model's ED and loss
         # wandb.run.summary["test_ed"]
+

@@ -30,6 +30,13 @@ class Vocab:
             str += self._i2v[idx.item()]
         return str
 
+    def to_string_list(self, indices):
+        # indices is a tensor
+        l = []
+        for idx in indices:
+            l.append(self._i2v[idx.item()])
+        return l
+
     def __len__(self):
         # ensure length is static because defaultdict inserts unseen keys upon first access
         return self.len

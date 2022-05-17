@@ -4,8 +4,9 @@ import sys
 import random
 import pickle
 import argparse
-from collections import defaultdict
+from collections import Counter
 import torch
+import unicodedata
 
 
 random.seed(1234)
@@ -38,39 +39,31 @@ class DataHandler:
         Assumes the first row contains the languages (daughter and proto-lang)
         Assumes the first column is the protoform (or characters in the case of Chinese)
 
-        Returns a dict mapping a protoform to the daughter forms
+        Returns a list of (protoform, daughter forms) tuples
         """
         with open(fpath) as fin:
             langs = fin.readline().strip().split('\t')
             if "chinese" in self._dataset_name:
                 langs = langs[1:]  # first column is character
-            d = {}
+            d = []
             for line in fin:
                 tkns = line.strip().split('\t')
-                d[tkns[0]] = tkns[1:]
+                d.append((tkns[0], tkns[1:]))
         return langs, d
 
     def _clean_middle_chinese_string(self, clean_string):
-        subtokens = clean_string.split('/')
-        tone = None
-        if len(subtokens) > 1:
-            tone = subtokens[1]
-            tone = {
-                '¹': '平',
-                '²': '上',
-                '³': '去',
-                '⁴': '入'
-            }[tone]
-            return subtokens[0], tone
-        else:
-            # the tone is not separated by a / - tɕʰoŋʷ¹
-            return clean_string[:-1], {
-                '¹': '平',
-                '²': '上',
-                '³': '去',
-                '⁴': '入'
-            }[clean_string[-1]]
+        # assumes the string looks like kʰwen² - segments + tone in superscript
+        # if there are pronunciation variants, take the first one
+        if '/' in clean_string:
+            clean_string = clean_string.split('/')[0]
 
+        tone = {
+            '¹': '平',
+            '²': '上',
+            '³': '去',
+            '⁴': '入'
+        }[clean_string[-1]]
+        return clean_string[:-1], tone
 
     def _clean_sinitic_daughter_string(self, raw_string):
         # only keep first entry for multiple variants (polysemy, pronunciation variation, etc.)
@@ -90,9 +83,15 @@ class DataHandler:
         return clean_string, tone
 
     def sinitic_tokenize(self, clean_string, merge_diacritics=False):
+        # for some reason, epitran is outputting in unicode composed form
+        clean_string = unicodedata.normalize('NFD', clean_string)
+
+        # swap order of nasalization and vowel length marker - i̯ːu
+        # the diphthong merger code assumes that the vowel length is marked before the semivowel
+        clean_string = clean_string.replace('̯̃', '̯̃')
+
         tkns = list(clean_string)
 
-        ### TODO: middle chinese didn't connect affricates with '͡' --> will remove these tokens for now.
         # affricate - should always be merged
         while '͡' in tkns:
             i = tkns.index('͡')
@@ -102,16 +101,49 @@ class DataHandler:
 
         # diacritics - optionally merge
         if merge_diacritics:
-            diacritics = {'ː', '̃', '̍', '̞', '̠', '̩' , 'ʰ', 'ʷ', '̱'}
-            # TODO: should diphthong be merged? yes, eventually
-            while diacritics & set(tkns):
+            vowel_diacritics = {'ː', '̃', '̞', '̠', '̱'}
+            diacritics = vowel_diacritics | {'̍', '̩', 'ʰ', 'ʷ'}
+            # source: https://en.wikipedia.org/wiki/IPA_vowel_chart_with_audio
+            vowels = { 'i', 'y', 'ɨ', 'ʉ', 'ɯ', 'u', 'ɪ', 'ʏ', 'ʊ', 'e', 'ø', 'ɘ', 'ɵ', 'ɤ', 'o', 'ə', 'ɛ', 'œ', 'ɜ', 'ɞ', 'ʌ', 'ɔ', 'æ', 'ɐ', 'a', 'ɶ', 'ä', 'ɑ', 'ɒ' }
+            suprasegmentals = set()
+            for v in vowels:
+                for d in vowel_diacritics:
+                    suprasegmentals.add(v + d)
+            vowels |= suprasegmentals
+            mid_vowels = {'e̞', 'ø̞', 'ə', 'ɤ̞', 'o̞'}
+            vowels |= mid_vowels
+
+            # ensures there's no overlap between the two
+            # ensure there's no diacritic that's a standalone, unmerged token
+            while (set(diacritics) | set('̯')) & set(tkns):
                 for i in range(len(tkns)):
-                    # if tkns[i] == '̯': # infinite loop
-                    #     tkns = tkns[:i-2] + [''.join(tkns[i-2: i+1])] + tkns[i+1:]
-                    #     break
                     if tkns[i] in diacritics:
+                        # merge the previous, (i - 1)th, character with the diacritic
                         tkns = tkns[:i-1] + [''.join(tkns[i-1: i+1])] + tkns[i+1:]
                         break
+
+                    # breve indicates diphthong / triphthongs. merge the entire diphthong
+                    elif tkns[i] == '̯':
+                        # rule: if final vowel and has the breve, it's a diphthong. ex: ei̯
+                        if i >= 2 and tkns[i - 2] in vowels:
+                            assert tkns[i - 1] in vowels
+                            tkns = tkns[:i - 2] + [''.join(tkns[i - 2: i + 1])] + tkns[i + 1:]
+                            break
+
+                        # rule: if first vowel (no previous vowels) and has the breve, it's a diphthong. ex: i̯a
+                        #      at this point, lengthened vowels should have been merged already
+                        elif tkns[i - 1] in vowels:
+                            assert tkns[i + 1] in vowels
+                            # rule: if 2 breves exist, then it's a triphthong. ex: i̯oʊ̯
+                            if i + 1 < len(tkns) and '̯' in tkns[i + 1:]:
+                                end = (i + 1) + tkns[i + 1:].index('̯')
+                                # merge the whole thing
+                                tkns = tkns[:i - 1] + [''.join(tkns[i - 1: end + 1])] + tkns[end + 1:]
+                            else:
+                                # diphthong
+                                tkns = tkns[:i - 1] + [''.join(tkns[i - 1: i + 2])] + tkns[i + 2:]
+                            break
+
         return tkns
 
     def tokenize(self, string):
@@ -122,7 +154,8 @@ class DataHandler:
         langs, data = self._read_tsv(f'./data/{self._dataset_name}.tsv')
         protolang = langs[0]
         cognate_set = {}
-        for cognate, tkn_list in data.items():
+        cognate_counter = Counter()
+        for cognate, tkn_list in data:
             entry = {}
             daughter_sequences = {}
             if "chinese" in self._dataset_name:
@@ -141,6 +174,9 @@ class DataHandler:
                     protolang: mc_tkns
                 }
                 entry['daughters'] = daughter_sequences
+                # the same character could have cognate sets of pronunciation variants
+                cognate_counter[cognate] += 1
+                cognate = cognate + str(cognate_counter[cognate])
                 cognate_set[cognate] = entry
             else:
                 protolang_tkns = self.tokenize(cognate)
