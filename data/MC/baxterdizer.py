@@ -7,8 +7,8 @@ baxterdizer.py
 A program for generating Middle Chinese transcriptions after the manner
 of Bill Baxter from the Middle Chinese descriptions given in the DOC.
 
-Based on <redacted>'s Python2 implementation. Adapted for Python3
-by <redacted>
+Based on David Mortensen's Python2 implementation. Adapted for Python3
+by Chenxuan Cui
 """
 ######################################################################
 
