@@ -317,9 +317,10 @@ langs = ['Middle Chinese (Baxter and Sagart 2014)'] + langs
 heteronym_count = set()
 
 
-romanization_output = 'wikihan-romanization.tsv'
-ipa_output = 'wikihan-ipa.tsv'
-with open(romanization_output, 'w') as rom_f, open(ipa_output, "w") as ipa_f, open('wikihan-ipa-recon.tsv', 'w') as temp_f:
+romanization_output = '../../wikihan-romanization.tsv'
+ipa_output = '../../wikihan-ipa.tsv'
+reconstruction_dataset_path = '../../wikihan-ipa-recon.tsv'
+with open(romanization_output, 'w') as rom_f, open(ipa_output, "w") as ipa_f, open(reconstruction_dataset_path, 'w') as temp_f:
     rom_f.write('Character\t' + '\t'.join(langs) + '\n')
     ipa_f.write('Character\t' + '\t'.join(langs) + '\n')
     temp_f.write('Character\t' + '\t'.join(langs) + '\n')
@@ -386,3 +387,11 @@ with open('mc_heteronyms', 'w') as f:
 with open('all-heteronyms', 'w') as f:
     for char in heteronym_count:
         f.write(char + '\n')
+
+
+# validate the dataset - ensure each row is formatted correctly
+with open(romanization_output, 'r') as rom_f, open(ipa_output, "r") as ipa_f, open(reconstruction_dataset_path, 'r') as recon_f:
+    for file_descr in [rom_f, ipa_f, recon_f]:
+        for i, line in enumerate(file_descr):
+            if not (line.count('\t') == 9):
+                print(f'line {i} malformed')
