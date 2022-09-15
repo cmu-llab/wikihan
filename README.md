@@ -29,11 +29,11 @@ A cognate set is one row in our table. A heteronymic character can have multiple
 
 # Files
 
-.
+```
 ├── LICENSE: Creative Commons License
 ├── data
 |    ├── MC
-|    |   ├── baxter_mc.py
+|    |   ├── baxter_mc.py: mappings going from Qieyun to Baxter and Sagart's ASCII transcription
 |    |   ├── baxterdizer.py: Script converting Baxter and Sagart's ASCII-based Middle Chinese transcription to IPA
 |    |   ├── ltc-Latn-bax.csv: Epitran mapping table going from a Baxter transcription character to an IPA phoneme; not used in this repo but included for reference
 |    |   ├── mc-pron-baxter.csv: mc-pron.csv with IPA pronunciations
@@ -48,7 +48,7 @@ A cognate set is one row in our table. A heteronymic character can have multiple
 ├── wikihan-ipa-reconstruction.tsv: Version of the dataset with at least 3 daughters (at least 4 entries including Middle Chinese)
 ├── wikihan-ipa.tsv: The dataset with pronunciations in International Phonetic Alphabet
 └── wikihan-romanization.tsv: The dataset with pronunciations left in their romanization (the same form in the Wiktionary snapshot)
-
+```
 
 # Updating the data
 
