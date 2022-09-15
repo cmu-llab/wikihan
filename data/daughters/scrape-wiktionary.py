@@ -319,7 +319,7 @@ heteronym_count = set()
 
 romanization_output = '../../wikihan-romanization.tsv'
 ipa_output = '../../wikihan-ipa.tsv'
-reconstruction_dataset_path = '../../wikihan-ipa-recon.tsv'
+reconstruction_dataset_path = '../../wikihan-ipa-reconstruction.tsv'
 with open(romanization_output, 'w') as rom_f, open(ipa_output, "w") as ipa_f, open(reconstruction_dataset_path, 'w') as temp_f:
     rom_f.write('Character\t' + '\t'.join(langs) + '\n')
     ipa_f.write('Character\t' + '\t'.join(langs) + '\n')
