@@ -5,7 +5,9 @@ For more details, please refer to Chang et al 2022.
 
 # Statistics
 Total entries: 67,943
+
 Cognate sets: 21,227
+
 Varieties: 8 (not including Middle Chinese)
 
 | Subgroup         | Dialect Chosen | Pronunciation entries |
