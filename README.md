@@ -69,7 +69,7 @@ python scrape-wiktionary.py
 
 Please cite WikiHan as follows:
 
-Kalvin Chang, Chenxuan Cui, Youngmin Kim, and David R. Mortensen (forthcoming). WikiHan: A New Comparative Dataset for Chinese Languages. In *Proceedings of the 29th International Conference on Computational Linguistics (COLING 2022)*, Gyeongju, Korea.
+Kalvin Chang, Chenxuan Cui, Youngmin Kim, and David R. Mortensen. 2022. WikiHan: A New Comparative Dataset for Chinese Languages. In *Proceedings of the 29th International Conference on Computational Linguistics (COLING 2022)*, Gyeongju, Korea.
 
 
 ```
