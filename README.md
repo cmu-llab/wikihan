@@ -15,6 +15,7 @@ Varieties: 8 (not including Middle Chinese)
 | Mandarin         | Beijing        | 20369                 |
 | Yue              | Cantonese      |  16727                |
 | Min              | Hokkien*       | 6185                  |
+| Hakka            | Sixian         | 3269 |
 | Wu               | Shanghainese   | 2877 |
 | Jin              | Taiyuan        | 1410 |
 | Xiang            | Old Xiang      | 1258 |
